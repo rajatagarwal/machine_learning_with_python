@@ -4,14 +4,16 @@ import math
 import numpy as np
 from sklearn import preprocessing, svm, model_selection
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+from matplotlib import style
 
-
+style.use("ggplot")
 # DAY 1
 quandl.ApiConfig.api_key = 'zbd-9gSkWFZGDmWDNTGa'
 
 df = quandl.get_table('WIKI/PRICES')
 
-# We just need adj. columns for our regression model. 
+# We just need adj. columns for our regression model.
 
 df = df[["adj_open", "adj_high", "adj_low", "adj_close", "adj_volume"]]
 
@@ -29,7 +31,7 @@ df = df[["adj_close", "HL_PC", "CO_PC", "adj_volume"]]
 
 # DAY 2
 
-# above all are the features. we need to find a label. numeric column like hl_pc and co_pc are not labels 
+# above all are the features. we need to find a label. numeric column like hl_pc and co_pc are not labels
 # and the only column related to money is adj_close. So we'll be forecasting on adj_close
 
 forecast_col = "adj_close"
@@ -47,7 +49,7 @@ forecast_out = int(math.ceil(.001 * len(df)))
 # forecast_out = int(math.ceil(.001 * 9900))
 # forecast_out = int(math.ceil(9.9))
 # forecast_out = 10
-# so we will be forecasting for 10 days. We're shifting each data by 10 days 
+# so we will be forecasting for 10 days. We're shifting each data by 10 days
 # more about shift operation here:
 # https://stackoverflow.com/questions/20095673/python-shift-column-in-pandas-dataframe-up-by-one
 df["label"] = df[forecast_col].shift(-forecast_out)
@@ -73,7 +75,6 @@ y = np.array(df["label"])
 # NOTE: we can scale X before feeding it to classifier. It normalize it.
 # It is not mandatory. So if you're using it, you always need to scale
 # it with new values. (Not only new values, but along with old values)
-
 X = preprocessing.scale(X)
 
 # Here I used to write cross_validation.train_test_split (After import cross_validation)
@@ -126,3 +127,69 @@ clf_lr_max_threads.fit(X_train, y_train)
 accuracy_lr_max_threads = clf_lr_max_threads.score(X_test, y_test)
 # accuracy should be same but it will run ultra fast. Mac Rocks. <3 :P
 print("Max threads linear regression accuracy", accuracy_lr_max_threads)
+
+# Day 4
+
+# Today we will be working on the prediction of y labels based on X features.
+# Unlike test data, this time would have only X and no y. Because in this real
+# life scenario, we're going to predict the value of y based on value of X.
+
+# For this let's take out forecast_out value (in our case for 10 days) from our
+# X features. Our new X will be having values till -10 days.
+# (We could've done with old variables as well but for sake of trying different
+# from tutorial and better understanding of the code, I am doing this.)
+
+X_predict = X[:-forecast_out]
+
+# X_lately are values of X without any y values known
+X_lately = X[-forecast_out:]
+
+# Let's shift values from DataFrame again
+df["label"] = df[forecast_col].shift(-forecast_out)
+
+# As we've modified our X, we need to drop na from the dataframe
+df.dropna(inplace=True)
+
+# create np array again
+y_predict = np.array(df["label"])
+
+# Training and test sets
+X_train_predict, X_test_predict, y_train_predict, y_test_predict = model_selection.train_test_split(X_predict, y_predict, test_size=.2)
+
+# Linear regression model
+clf_predict = LinearRegression(n_jobs=10)
+
+# Fit model with training dataset
+clf_predict.fit(X_train_predict, y_train_predict)
+
+# Get Accuracy of the model
+accuracy_prediction_model = clf_predict.score(X_test_predict, y_test_predict)
+
+# Predict values of y based on X_lately because there y are unknown
+# in this predict function we can pass either single value of X or X as an array
+predicted_values = clf_predict.predict(X_lately)
+
+print(accuracy_prediction_model, predicted_values)
+
+# Building charts
+
+# Let's create a new column in our dataframe and fill with NaN
+df["forecast"] = np.nan
+
+for i in predicted_values:
+    df.loc["forecast"] = [np.nan for _ in range(len(df.columns) -1)] + [i]
+
+# Let's plot the values
+df["adj_close"].plot()
+df["forecast"].plot()
+
+# plot legend. Value 4 tells us about bottom right position of legend
+plt.legend(loc=4)
+
+# Give label names
+plt.xlabel("Series")
+plt.ylabel("Price")
+
+# Display plot
+plt.show()
+
