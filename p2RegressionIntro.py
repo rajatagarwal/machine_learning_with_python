@@ -6,6 +6,7 @@ from sklearn import preprocessing, svm, model_selection
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 from matplotlib import style
+import pickle
 
 style.use("ggplot")
 # DAY 1
@@ -193,3 +194,37 @@ plt.ylabel("Price")
 # Display plot
 plt.show()
 
+# Day 5
+
+# We will talk about pickling
+
+# pickle is to save the machine learning model, so it doesnt require to
+# re-run the machine learning classifier with data everytime. we can just
+# load the trained model and use it. Although, in production, you can train
+# your classifier once in a while.
+
+# We will save "clf_linear_regression" and re-open it.
+
+with open("linear_regression.pickle", "wb") as f:
+    pickle.dump(clf_linear_regression, f)
+
+# Here we've dumped the classifier into a file, which we've already created.
+# Now we'll read that classifier again, without re-training it.
+
+# Note: We can comment the above lines of code once we write the classifier
+# into a pickle file. We can also comment the lines where we defined the training
+# of clf_linear_regression classifier after first run. So that, it will always
+# read from the file and execute the model.
+
+pickle_in = open("linear_regression.pickle", "rb")
+
+clf_loaded = pickle.load(pickle_in)
+
+# Now we can use this clf_loaded for further work.
+
+accuracy_loaded_classifier = clf_loaded.score(X_test, y_test)
+
+print("Loaded classifier accuracy", accuracy_loaded_classifier)
+
+# This can be very useful, if we have a huge dataset and we don't
+# need to train our classifier each time we run the program.
